@@ -1,3 +1,7 @@
+
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -23,15 +27,25 @@ def get_idx_data():
         return None
 
 # Fungsi ambil data historis dari yfinance
+
+# Fungsi ambil data historis dari yfinance dengan header agar tidak kena 403
 def get_historical_data_yf(kode):
     try:
         ticker = f"{kode}.JK"
-        df = yf.download(ticker, period="6mo")
+        session = requests.Session()
+        retry = Retry(connect=3, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('https://', adapter)
+        session.headers.update({'User-Agent': 'Mozilla/5.0'})
+
+        df = yf.download(ticker, period="6mo", session=session)
         df = df[['Close']].reset_index()
         return df
     except Exception as e:
         st.error(f"Gagal mengambil data historis untuk {kode}: {e}")
         return pd.DataFrame()
+
+
 
 # Analisis teknikal
 def analyze_stock(df_hist):
